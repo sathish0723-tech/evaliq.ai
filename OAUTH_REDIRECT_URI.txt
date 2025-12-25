@@ -1,0 +1,48 @@
+===========================================
+GOOGLE OAUTH - REDIRECT URI TO ADD
+===========================================
+
+Copy and paste this EXACT URL into Google Cloud Console:
+
+For Development (localhost):
+http://localhost:3000/api/auth/callback
+
+For Production (replace with your domain):
+https://yourdomain.com/api/auth/callback
+
+===========================================
+INSTRUCTIONS:
+===========================================
+
+1. Go to: https://console.cloud.google.com/apis/credentials
+2. Select project: able-source-477017-n9
+3. Click on OAuth client: 812161662161-1dfoaaa4qa9lc8489hr23s5esv7cgook
+4. Under "Authorized redirect URIs", click "ADD URI"
+5. Paste: http://localhost:3000/api/auth/callback
+6. Click "SAVE"
+7. Wait 1-2 minutes for changes to take effect
+
+===========================================
+VERIFICATION:
+===========================================
+
+After adding, test by:
+1. Running: npm run dev
+2. Going to: http://localhost:3000/onboarding
+3. Clicking "Continue with Google"
+4. You should see Google's consent screen (not an error)
+
+===========================================
+
+
+
+
+
+
+
+
+
+
+
+
+
