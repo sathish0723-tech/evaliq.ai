@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const GEMINI_API_KEY = "AIzaSyA6SmY9fDBSbnpmJWir58nC5BDkpH_wyxM";
+const GEMINI_API_KEY = "AIzaSyAFVFLGZSsaCk5u8gkuISmD2QwhRBQz2y8";
 
 export async function POST(request) {
   try {
@@ -83,10 +83,10 @@ Do not include any explanation, just the JSON.`;
     }
 
     const data = await response.json();
-    
+
     // Extract the text response
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!textResponse) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
     }

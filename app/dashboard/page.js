@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback } from "react"
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { AppSidebar } from '@/components/app-sidebar'
 import {
   Breadcrumb,
@@ -263,6 +265,8 @@ const marksChartConfig = {
 }
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [classes, setClasses] = useState([])
   const [subjects, setSubjects] = useState([])
   const [selectedClass, setSelectedClass] = useState('')
@@ -275,6 +279,13 @@ export default function DashboardPage() {
   const [viewType, setViewType] = useState('attendance')
   const [chartTimeRange, setChartTimeRange] = useState('7d')
   const [subjectDropdownOpen, setSubjectDropdownOpen] = useState(false)
+  
+  // Check if user needs to complete setup
+  useEffect(() => {
+    if (status === 'authenticated' && session?.needsSetup && session?.user?.managementId) {
+      router.push(`/onboarding/setup?managementId=${session.user.managementId}`)
+    }
+  }, [session, status, router])
   
   // Attendance state
   const [attendanceChartData, setAttendanceChartData] = useState([])

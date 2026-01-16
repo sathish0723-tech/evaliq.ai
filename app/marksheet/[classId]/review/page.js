@@ -107,6 +107,7 @@ export default function ReviewMarksheetPage() {
   
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState(false)
+  const [downloadingPDF, setDownloadingPDF] = useState(false)
   const [template, setTemplate] = useState(null)
   const [marksheets, setMarksheets] = useState([])
   const [selectedMarksheets, setSelectedMarksheets] = useState([])
@@ -295,6 +296,209 @@ export default function ReviewMarksheetPage() {
     }
   }
 
+  // Convert marksheet data to Hybiscus format
+  const convertMarksheetToHybiscus = (marksheet, templateData) => {
+    const sections = []
+
+    // Header section with institution info
+    if (templateData?.institutionName) {
+      sections.push({
+        type: "text",
+        content: `\n${templateData.institutionName}\n`
+      })
+    }
+
+    if (templateData?.subtitle) {
+      sections.push({
+        type: "text",
+        content: `${templateData.subtitle}\n`
+      })
+    }
+
+    // Student information section
+    sections.push({
+      type: "text",
+      content: `\nStudent Name: ${marksheet.studentName || 'N/A'}`
+    })
+
+    if (marksheet.rollNumber) {
+      sections.push({
+        type: "text",
+        content: `Roll Number: ${marksheet.rollNumber}`
+      })
+    }
+
+    if (marksheet.studentClass) {
+      sections.push({
+        type: "text",
+        content: `Class: ${marksheet.studentClass}\n`
+      })
+    }
+
+    // Subjects table as chart data
+    if (marksheet.subjects && marksheet.subjects.length > 0) {
+      const subjectData = marksheet.subjects.map(subject => ({
+        name: subject.name || subject.subjectName || 'Subject',
+        marks: parseFloat(subject.obtainedMarks) || 0,
+        maxMarks: parseFloat(subject.maxMarks) || 0
+      }))
+
+      sections.push({
+        type: "chart",
+        chartType: "bar",
+        data: {
+          labels: subjectData.map(s => s.name),
+          values: subjectData.map(s => s.marks)
+        }
+      })
+
+      // Also add a text table for detailed view
+      const tableContent = marksheet.subjects.map((subject, index) => 
+        `${index + 1}. ${subject.name || subject.subjectName}: ${subject.obtainedMarks || 0} / ${subject.maxMarks || 0}`
+      ).join('\n')
+
+      sections.push({
+        type: "text",
+        content: `\nSubject Details:\n${tableContent}\n`
+      })
+    }
+
+    // Summary section
+    sections.push({
+      type: "text",
+      content: `\nTotal Marks: ${marksheet.totalObtainedMarks || 0} / ${marksheet.totalMaxMarks || 0}`
+    })
+
+    if (marksheet.percentage !== undefined) {
+      sections.push({
+        type: "text",
+        content: `Percentage: ${marksheet.percentage.toFixed(2)}%`
+      })
+    }
+
+    if (marksheet.grade) {
+      sections.push({
+        type: "text",
+        content: `Grade: ${marksheet.grade}`
+      })
+    }
+
+    if (marksheet.result) {
+      sections.push({
+        type: "text",
+        content: `Result: ${marksheet.result}\n`
+      })
+    }
+
+    if (marksheet.remarks) {
+      sections.push({
+        type: "text",
+        content: `Remarks: ${marksheet.remarks}`
+      })
+    }
+
+    return {
+      title: `${marksheet.studentName || 'Student'} - Marksheet`,
+      sections
+    }
+  }
+
+  // Download PDF using Hybiscus
+  const handleDownloadPDF = async (marksheet) => {
+    if (!marksheet || !template) {
+      toast.error('Marksheet or template data not available')
+      return
+    }
+
+    setDownloadingPDF(true)
+    try {
+      // Convert marksheet to Hybiscus format
+      const reportJSON = convertMarksheetToHybiscus(marksheet, template)
+
+      // Call Hybiscus API
+      const response = await fetch('/api/hybiscus/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          reportJSON,
+          title: `${marksheet.studentName || 'Student'}_Marksheet`
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to generate PDF')
+      }
+
+      const data = await response.json()
+
+      if (data.pdf) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(data.pdf)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: 'application/pdf' })
+        
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = data.filename || `${marksheet.studentName}_marksheet.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        toast.success('PDF downloaded successfully!')
+      } else {
+        throw new Error('No PDF data received')
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      toast.error(error.message || 'Failed to download PDF')
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
+
+  // Bulk download PDFs for selected marksheets
+  const handleBulkDownloadPDF = async () => {
+    if (selectedMarksheets.length === 0) {
+      toast.error('Please select marksheets to download')
+      return
+    }
+
+    setDownloadingPDF(true)
+    try {
+      const selectedMarksheetData = marksheets.filter(m => 
+        selectedMarksheets.includes(m.marksheetId)
+      )
+
+      toast.info(`Generating ${selectedMarksheetData.length} PDF(s)...`)
+
+      // Download each PDF sequentially to avoid overwhelming the API
+      for (let i = 0; i < selectedMarksheetData.length; i++) {
+        const marksheet = selectedMarksheetData[i]
+        await handleDownloadPDF(marksheet)
+        
+        // Small delay between downloads
+        if (i < selectedMarksheetData.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      }
+
+      toast.success(`Successfully downloaded ${selectedMarksheetData.length} PDF(s)!`)
+    } catch (error) {
+      console.error('Error in bulk download:', error)
+      toast.error('Failed to download some PDFs')
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
+
   if (loading) {
     return (
       <SidebarProvider>
@@ -371,6 +575,20 @@ export default function ReviewMarksheetPage() {
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Add More Students
               </Button>
+              {selectedMarksheets.length > 0 && (
+                <Button 
+                  variant="outline"
+                  onClick={handleBulkDownloadPDF}
+                  disabled={downloadingPDF}
+                >
+                  {downloadingPDF ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Download PDF ({selectedMarksheets.length})
+                </Button>
+              )}
               <Button 
                 onClick={approveSelected}
                 disabled={approving || selectedMarksheets.length === 0}
@@ -528,11 +746,29 @@ export default function ReviewMarksheetPage() {
               <DialogTitle className="flex items-center justify-between">
                 <span>Marksheet Preview - {viewMarksheet?.studentName}</span>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" disabled>
-                    <Download className="h-4 w-4 mr-1" />
-                    PDF
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleDownloadPDF(viewMarksheet)}
+                    disabled={downloadingPDF || !viewMarksheet}
+                  >
+                    {downloadingPDF ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-1" />
+                        PDF
+                      </>
+                    )}
                   </Button>
-                  <Button size="sm" variant="outline" disabled>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => window.print()}
+                  >
                     <Printer className="h-4 w-4 mr-1" />
                     Print
                   </Button>
@@ -595,6 +831,25 @@ export default function ReviewMarksheetPage() {
                 {currentReportIndex + 1} / {marksheets.length}
               </span>
             </div>
+
+            {/* Download button */}
+            <button
+              onClick={() => handleDownloadPDF(viewMarksheet)}
+              disabled={downloadingPDF || !viewMarksheet}
+              className="absolute top-3 right-12 z-50 px-3 py-1.5 bg-white/90 rounded-full hover:bg-white shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadingPDF ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-800" />
+                  <span className="text-xs font-medium text-gray-800">Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 text-gray-800" />
+                  <span className="text-xs font-medium text-gray-800">Download PDF</span>
+                </>
+              )}
+            </button>
 
             {/* Previous button - positioned near the report */}
             <button

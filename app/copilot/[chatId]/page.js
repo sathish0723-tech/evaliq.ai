@@ -85,6 +85,7 @@ export default function CopilotChatPage() {
             role: msg.role,
             content: msg.content,
             timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+            data: msg.data || null, // Preserve data field if it exists
           }))
           
           setMessages(loadedMessages)
@@ -233,8 +234,9 @@ export default function CopilotChatPage() {
         const assistantMessage = {
           id: Date.now() + 1,
           role: 'assistant',
-        content: assistantContent,
+          content: assistantContent,
           timestamp: new Date(),
+          data: data.data && Array.isArray(data.data) ? data.data : null, // Store data with message
         }
 
         const finalMessages = [...updatedMessages, assistantMessage]
@@ -270,6 +272,7 @@ export default function CopilotChatPage() {
           role: msg.role,
           content: msg.content,
           timestamp: msg.timestamp,
+          data: msg.data || null, // Include data field when saving
         }))
 
       updateConversation(messagesToSave, batch).catch(error => {
@@ -617,8 +620,14 @@ export default function CopilotChatPage() {
                               const extractedTitle = titleMatch ? titleMatch[1].trim() : 
                                                     (selectedTool === 'deep-search' ? 'Deep Search Results' : 'Research Report')
                               
+                              // Extract data from message if available
+                              const reportDataArray = message.data && Array.isArray(message.data) 
+                                ? message.data 
+                                : null
+                              
                               setReportTitle(extractedTitle)
                               setReportContent(message.content)
+                              setReportData(reportDataArray)
                               setReportTimestamp(message.timestamp)
                               setShowReportView(true)
                             }}

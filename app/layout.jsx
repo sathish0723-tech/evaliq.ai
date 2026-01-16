@@ -5,6 +5,7 @@ import './globals.css'
 // Import AppProvider dynamically to handle client component in server layout
 import { AppProvider } from '@/contexts/app-context'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SessionProvider } from '@/components/session-provider'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -30,9 +31,11 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="theme"
         >
-          <AppProvider>
-            {children}
-          </AppProvider>
+          <SessionProvider>
+            <AppProvider>
+              {children}
+            </AppProvider>
+          </SessionProvider>
         </ThemeProvider>
         <Analytics />
       </body>

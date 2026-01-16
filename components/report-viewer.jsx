@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { X, FileText, Search, List, Plus } from 'lucide-react'
+import { X, FileText, Search, List, Plus, Loader2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export default function ReportViewer({ 
   reportContent, 
@@ -23,113 +24,177 @@ export default function ReportViewer({
   const students = reportData && Array.isArray(reportData) ? reportData : []
   const hasStudents = students.length > 0
   const contentRef = React.useRef(null)
+  const [downloadingPDF, setDownloadingPDF] = React.useState(false)
   
-  // PDF Export function
-  const handleExportPDF = async () => {
-    try {
-      // Dynamically import jsPDF and html2canvas
-      const jsPDF = (await import('jspdf')).default
-      const html2canvas = (await import('html2canvas')).default
-      
-      if (!contentRef.current) return
-      
-      // Show loading state (optional)
-      const loadingElement = document.createElement('div')
-      loadingElement.textContent = 'Generating PDF...'
-      loadingElement.style.position = 'fixed'
-      loadingElement.style.top = '50%'
-      loadingElement.style.left = '50%'
-      loadingElement.style.transform = 'translate(-50%, -50%)'
-      loadingElement.style.background = 'rgba(0,0,0,0.8)'
-      loadingElement.style.color = 'white'
-      loadingElement.style.padding = '20px'
-      loadingElement.style.borderRadius = '8px'
-      loadingElement.style.zIndex = '9999'
-      document.body.appendChild(loadingElement)
-      
-      // Capture the content area with oklch color handling
-      // Suppress console errors for oklch
-      const originalError = console.error
-      console.error = (...args) => {
-        if (args[0]?.includes?.('oklch') || args[0]?.includes?.('unsupported color')) {
-          // Suppress oklch errors
-          return
-        }
-        originalError.apply(console, args)
-      }
-      
-      try {
-        const canvas = await html2canvas(contentRef.current, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          allowTaint: true,
-          foreignObjectRendering: false,
-          ignoreElements: (element) => {
-            // Ignore elements that might cause issues
-            return false
-          },
-          onclone: (clonedDoc) => {
-            // Add a style tag to override problematic colors
-            try {
-              const style = clonedDoc.createElement('style')
-              style.textContent = `
-                * {
-                  color: rgb(0, 0, 0) !important;
-                }
-                body {
-                  background-color: rgb(255, 255, 255) !important;
-                }
-              `
-              clonedDoc.head.appendChild(style)
-            } catch (e) {
-              // Ignore style errors
-            }
-          }
+  // Convert report content to Hybiscus format
+  const convertReportToHybiscus = () => {
+    const hybiscusSections = []
+    const { title: parsedTitle, sections: parsedSections } = parseReport(reportContent)
+
+    console.log('Converting to Hybiscus format:', {
+      hasStudents,
+      studentsCount: students.length,
+      students: students.map(s => s.studentName)
+    })
+
+    if (hasStudents && students.length > 0) {
+      // Add compact summary section first
+      const totalStudents = students.length
+      const avgPerformance = students.reduce((sum, s) => sum + (s.averageMarks || s.percentage || 0), 0) / totalStudents
+      hybiscusSections.push({
+        type: "text",
+        content: `# Student Performance Report - ${totalStudents} Students\n**Average Performance:** ${avgPerformance.toFixed(2)}%\n\n`
+      })
+
+      // Convert student data to compact sections (optimized for single page)
+      students.forEach((student, index) => {
+        console.log(`Processing student ${index + 1}/${students.length}:`, student.studentName)
+        
+        // Compact student header
+        hybiscusSections.push({
+          type: "text",
+          content: `## ${index + 1}. ${student.studentName || 'Student'}\n`
         })
-        
-        // Restore console.error
-        console.error = originalError
-        
-        const imgData = canvas.toDataURL('image/png')
-        const pdf = new jsPDF('p', 'mm', 'a4')
-        
-        const imgWidth = 210 // A4 width in mm
-        const pageHeight = 297 // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width
-        let heightLeft = imgHeight
-        let position = 0
-        
-        // Add first page
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-        
-        // Add additional pages if needed
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight
-          pdf.addPage()
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-          heightLeft -= pageHeight
+
+        // Compact contact and performance in one line
+        const avgMarks = student.averageMarks?.toFixed(1) || student.percentage?.toFixed(1) || 'N/A'
+        const contactInfo = student.studentEmail || student.studentPhone 
+          ? `Email: ${student.studentEmail || 'N/A'} | Phone: ${student.studentPhone || 'N/A'}` 
+          : ''
+        hybiscusSections.push({
+          type: "text",
+          content: `${contactInfo ? `**Contact:** ${contactInfo} | ` : ''}**Avg:** ${avgMarks}% | **Tests:** ${student.totalTests || 'N/A'} | **Total:** ${student.totalMarks || 'N/A'}\n`
+        })
+
+        // Compact attendance (text only, no chart to save space)
+        if (student.attendance) {
+          const attendancePct = student.attendance.attendancePercentage?.toFixed(1) || 'N/A'
+          hybiscusSections.push({
+            type: "text",
+            content: `**Attendance:** ${attendancePct}% (${student.attendance.presentDays || 0}P/${student.attendance.absentDays || 0}A/${student.attendance.lateDays || 0}L)\n`
+          })
         }
+
+        // Shortened analysis (first 200 chars only to save space)
+        if (student.analysis) {
+          const shortAnalysis = student.analysis.length > 200 
+            ? student.analysis.substring(0, 200) + '...' 
+            : student.analysis
+          hybiscusSections.push({
+            type: "text",
+            content: `**Summary:** ${shortAnalysis}\n`
+          })
+        }
+
+        // Minimal separator
+        if (index < students.length - 1) {
+          hybiscusSections.push({
+            type: "text",
+            content: "\n"
+          })
+        }
+      })
+      
+      console.log(`Completed processing ${students.length} students, created ${hybiscusSections.length} sections (optimized for single page)`)
+    } else if (parsedSections.length > 0) {
+      // Convert parsed sections to Hybiscus format
+      parsedSections.forEach((section) => {
+        if (section.title) {
+          hybiscusSections.push({
+            type: "text",
+            content: `\n${section.title}\n`
+          })
+        }
+        if (section.content) {
+          hybiscusSections.push({
+            type: "text",
+            content: section.content
+          })
+        }
+      })
+    } else if (reportContent) {
+      // Fallback to raw content
+      hybiscusSections.push({
+        type: "text",
+        content: reportContent
+      })
+    }
+
+    console.log('Hybiscus sections created:', {
+      totalSections: hybiscusSections.length,
+      studentSections: hybiscusSections.filter(s => s.type === 'text' && s.content.includes('Student')).length
+    })
+
+    return {
+      title: title || reportTitle || parsedTitle || 'Report',
+      sections: hybiscusSections
+    }
+  }
+  
+  // PDF Export function using Hybiscus API
+  const handleExportPDF = async () => {
+    setDownloadingPDF(true)
+    try {
+      console.log('Starting PDF export, students data:', {
+        studentsCount: students.length,
+        hasStudents,
+        reportData: reportData
+      })
+      
+      // Convert report to Hybiscus format
+      const reportJSON = convertReportToHybiscus()
+      
+      console.log('Report JSON prepared:', {
+        title: reportJSON.title,
+        sectionsCount: reportJSON.sections.length
+      })
+
+      // Call Hybiscus API
+      const response = await fetch('/api/hybiscus/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          reportJSON,
+          title: title || reportTitle || 'Report'
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || error.details || 'Failed to generate PDF')
+      }
+
+      const data = await response.json()
+
+      if (data.pdf) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(data.pdf)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: 'application/pdf' })
         
-        // Generate filename
-        const filename = `${title || 'Report'}_${new Date().toISOString().split('T')[0]}.pdf`
-        
-        // Save the PDF
-        pdf.save(filename)
-        
-        // Remove loading element
-        document.body.removeChild(loadingElement)
-      } catch (canvasError) {
-        // Restore console.error
-        console.error = originalError
-        document.body.removeChild(loadingElement)
-        throw canvasError
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = data.filename || `${title || 'Report'}_${new Date().toISOString().split('T')[0]}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        toast.success('PDF downloaded successfully!')
+      } else {
+        throw new Error('No PDF data received')
       }
     } catch (error) {
-      console.error('Error generating PDF:', error)
-      alert('Failed to generate PDF. Please try again.')
+      console.error('Error downloading PDF:', error)
+      toast.error(error.message || 'Failed to download PDF')
+    } finally {
+      setDownloadingPDF(false)
     }
   }
   
@@ -376,20 +441,25 @@ export default function ReportViewer({
                 <DropdownMenuItem>Jump to Section</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 gap-2">
-                  <FileText className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 gap-2"
+              onClick={handleExportPDF}
+              disabled={downloadingPDF}
+            >
+              {downloadingPDF ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
                   Export as PDF
+                </>
+              )}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={handleExportPDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export as PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
         </div>
         
         {/* Right: Create, X */}

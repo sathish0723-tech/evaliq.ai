@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -104,33 +105,16 @@ export default function OnboardingClient() {
     }
   }
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     setIsLoading(true)
+    setErrorMessage(null)
+    
     try {
-      // Google OAuth configuration
-      // Client ID from environment variable
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-      
-      if (!clientId) {
-        setErrorMessage('Google OAuth is not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID in your environment variables.')
-        setIsLoading(false)
-        return
-      }
-      
-      // Construct redirect URI - must match exactly what's in Google Cloud Console
-      // For development: http://localhost:3000/api/auth/callback
-      // For production: https://yourdomain.com/api/auth/callback
-      const redirectUri = `${window.location.origin}/api/auth/callback`
-      
-      // Log the redirect URI for debugging (remove in production)
-      console.log('OAuth Redirect URI:', redirectUri)
-      
-      const scope = 'openid email profile'
-      const responseType = 'code'
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`
-
-      // Redirect to Google OAuth
-      window.location.href = authUrl
+      // Use NextAuth signIn function - this will redirect to Google OAuth
+      await signIn('google', {
+        callbackUrl: '/dashboard',
+      })
+      // Note: signIn with redirect will navigate away, so we don't need to handle the response
     } catch (error) {
       console.error('Google OAuth error:', error)
       setErrorMessage(`Failed to initiate Google authentication: ${error.message || 'Please check your OAuth configuration'}`)

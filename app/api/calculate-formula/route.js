@@ -82,7 +82,8 @@ export async function POST(request) {
             {
               parts: [
                 { text: SYSTEM_PROMPT },
-                { text: `User prompt: "${prompt}"
+                {
+                  text: `User prompt: "${prompt}"
 
 IMPORTANT: If the prompt contains "multiple 100", "times 100", "multiply by 100", or mentions "100" after division, you MUST include "* 100" in the final formula.
 
@@ -107,7 +108,7 @@ Generate the formula now:` }
     }
 
     const data = await response.json()
-    
+
     // Extract the text response
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
@@ -147,11 +148,11 @@ Generate the formula now:` }
     const closeParens = (cleanFormula.match(/\)/g) || []).length
     const hasUnbalancedParens = openParens !== closeParens
 
-    const isIncomplete = incompletePatterns.some(pattern => pattern.test(cleanFormula)) || 
-                         cleanFormula.length < 5 || // Too short to be valid
-                         !cleanFormula.match(/[a-zA-Z]/) || // No variables
-                         hasUnbalancedParens || // Unbalanced parentheses
-                         /[+\-*/]\s*$/.test(cleanFormula) // Ends with operator
+    const isIncomplete = incompletePatterns.some(pattern => pattern.test(cleanFormula)) ||
+      cleanFormula.length < 5 || // Too short to be valid
+      !cleanFormula.match(/[a-zA-Z]/) || // No variables
+      hasUnbalancedParens || // Unbalanced parentheses
+      /[+\-*/]\s*$/.test(cleanFormula) // Ends with operator
 
     if (!cleanFormula || isIncomplete) {
       console.log('Formula appears incomplete or invalid:', cleanFormula, 'Using fallback')
@@ -164,7 +165,7 @@ Generate the formula now:` }
     return NextResponse.json({ formula: cleanFormula })
   } catch (error) {
     console.error('Error generating formula:', error)
-    
+
     // Fallback to rule-based generation
     try {
       const body = await request.json()
