@@ -78,7 +78,7 @@ export function AppSidebar({ ...props }) {
       isActive: activeSection === 'students' || activeSection === 'assessments' || activeSection === 'tasks' || activeSection === 'notes',
       items: [
         {
-          title: "Assessments",
+          title: "Documents",
           url: "/assessments",
           badge: "Coming Soon",
         },

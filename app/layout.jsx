@@ -11,11 +11,11 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata = {
-  title: 'Student Management System',
+  title: 'Evaliq',
   description: 'Student Management System',
   generator: 'v0.app',
   icons: {
-    icon: '/icon.svg',
+    icon: 'https://res.cloudinary.com/difauucm4/image/upload/v1766603112/student-management/logos/aiivy45l4cirjv5cxbkn.png',
   },
 }
 
@@ -25,9 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <ThemeProvider 
-          attribute="class" 
-          defaultTheme="light" 
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
           enableSystem={false}
           storageKey="theme"
         >

@@ -19,43 +19,8 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-// Colorful FSSA logo SVG
-function FSSALogo({ className = "size-4" }) {
-  return (
-    <svg 
-      className={className} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <linearGradient id="fssa-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00f2fe" />
-          <stop offset="14%" stopColor="#4facfe" />
-          <stop offset="28%" stopColor="#667eea" />
-          <stop offset="42%" stopColor="#764ba2" />
-          <stop offset="57%" stopColor="#f093fb" />
-          <stop offset="71%" stopColor="#f5576c" />
-          <stop offset="85%" stopColor="#fa709a" />
-          <stop offset="100%" stopColor="#fee140" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 2L2 7L12 12L22 7L12 2Z"
-        fill="url(#fssa-gradient)"
-      />
-      <path
-        d="M2 17L12 22L22 17L12 12L2 17Z"
-        fill="url(#fssa-gradient)"
-      />
-      <path
-        d="M2 12L12 17L22 12L12 7L2 12Z"
-        fill="url(#fssa-gradient)"
-        opacity="0.8"
-      />
-    </svg>
-  )
-}
+// GalleryVerticalEnd icon for the platform
+import { GalleryVerticalEnd } from "lucide-react"
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
@@ -84,10 +49,10 @@ export function TeamSwitcher() {
   }
 
   // Default to FSSA if no name is set
-  const managementName = management.name && management.name.trim() !== '' 
-    ? management.name 
+  const managementName = management.name && management.name.trim() !== ''
+    ? management.name
     : 'FSSA'
-  
+
   // Determine management type based on setup
   const managementType = management.name && management.name.trim() !== ''
     ? (management.numCoaches > 0 || management.numStudents > 0 ? 'Enterprise' : 'Organization')
@@ -95,8 +60,8 @@ export function TeamSwitcher() {
 
   // Check if logo is a URL (Cloudinary, base64, or any http/https URL)
   const hasLogo = management.logo && (
-    management.logo.startsWith('http://') || 
-    management.logo.startsWith('https://') || 
+    management.logo.startsWith('http://') ||
+    management.logo.startsWith('https://') ||
     management.logo.startsWith('data:image')
   )
   const logoUrl = hasLogo ? management.logo : null
@@ -113,13 +78,15 @@ export function TeamSwitcher() {
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden shrink-0 bg-transparent group-data-[collapsible=icon]:size-8">
                 {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
+                  <img
+                    src={logoUrl}
                     alt={managementName}
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <FSSALogo className="size-6 group-data-[collapsible=icon]:size-5" />
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                    <GalleryVerticalEnd className="size-4" />
+                  </div>
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
@@ -141,13 +108,15 @@ export function TeamSwitcher() {
             <DropdownMenuItem className="gap-2 p-2">
               <div className="flex size-6 items-center justify-center rounded-md border overflow-hidden">
                 {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
+                  <img
+                    src={logoUrl}
                     alt={managementName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <FSSALogo className="size-3.5 shrink-0" />
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-6 items-center justify-center rounded-md">
+                    <GalleryVerticalEnd className="size-4" />
+                  </div>
                 )}
               </div>
               {managementName}
