@@ -89,10 +89,10 @@ export default function AttendanceByClassPage() {
   // Listen for batch changes and refetch data
   useEffect(() => {
     if (!classId) return
-    
+
     const { getSelectedBatch } = require('@/lib/utils-batch')
     let currentBatch = getSelectedBatch()
-    
+
     const handleBatchChange = () => {
       const newBatch = getSelectedBatch()
       if (newBatch !== currentBatch) {
@@ -114,21 +114,21 @@ export default function AttendanceByClassPage() {
         }
       }
     }
-    
+
     // Listen for storage events (cross-tab)
     const handleStorageChange = (e) => {
       if (e.key === 'selectedBatch') {
         handleBatchChange()
       }
     }
-    
+
     // Listen for custom batch change event (same-tab)
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('batchChanged', handleBatchChange)
-    
+
     // Poll for batch changes (fallback)
     const pollInterval = setInterval(handleBatchChange, 500)
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('batchChanged', handleBatchChange)
@@ -169,7 +169,7 @@ export default function AttendanceByClassPage() {
         const studentsList = data.students || []
         studentsRef.current = studentsList // Update ref
         setStudents(studentsList)
-        
+
         // Initialize attendance data with default 'present' status
         // This will be overridden by fetchAttendanceForDate if date is set
         const initialAttendance = {}
@@ -178,7 +178,7 @@ export default function AttendanceByClassPage() {
         })
         setAttendanceData(initialAttendance)
         console.log(`[AttendanceByClass] Fetched ${studentsList.length} students for batch: "${require('@/lib/utils-batch').getSelectedBatch()}"`)
-        
+
         // Fetch attendance for current date after students are loaded
         if (date) {
           // Use setTimeout to ensure state is updated
@@ -206,14 +206,14 @@ export default function AttendanceByClassPage() {
       setAttendanceLoading(true)
       // Use ref to get latest students (avoids closure issues)
       const currentStudents = studentsRef.current
-      
+
       // Wait for students to be loaded before fetching attendance
       if (currentStudents.length === 0) {
         console.log('[AttendanceByClass] Waiting for students to load before fetching attendance')
         setAttendanceLoading(false)
         return
       }
-      
+
       const { buildUrlWithBatch } = await import('@/lib/utils-batch')
       const url = buildUrlWithBatch('/api/attendance', { date, classId })
       const response = await fetch(url, {
@@ -223,12 +223,12 @@ export default function AttendanceByClassPage() {
       if (response.ok) {
         const data = await response.json()
         const attendanceRecords = data.attendance || []
-        
+
         // Build fresh attendance data object from current students
         const freshAttendance = {}
         const freshLeaveReasons = {}
         const updatedStudents = currentStudents.map(student => {
-            const record = attendanceRecords.find(r => r.studentId === student.id)
+          const record = attendanceRecords.find(r => r.studentId === student.id)
           const status = record ? record.status : 'present'
           // Build attendance data map
           freshAttendance[student.id] = status
@@ -237,12 +237,12 @@ export default function AttendanceByClassPage() {
             freshLeaveReasons[student.id] = record.reason
           }
           // Update student's attendance status
-            return {
-              ...student,
+          return {
+            ...student,
             attendanceStatus: status
           }
         })
-        
+
         // Update ref and both states - React will batch these updates
         studentsRef.current = updatedStudents
         setAttendanceData(freshAttendance)
@@ -262,7 +262,7 @@ export default function AttendanceByClassPage() {
       ...prev,
       [studentId]: status
     }))
-    
+
     // Update leave reason if provided
     if (reason !== null) {
       setLeaveReasons(prev => ({
@@ -277,7 +277,7 @@ export default function AttendanceByClassPage() {
         return updated
       })
     }
-    
+
     setStudents(prevStudents => {
       const updated = prevStudents.map(student =>
         student.id === studentId

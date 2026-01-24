@@ -1,0 +1,70 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                  QUICK START - EMAIL SETUP                           ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  ✅ STEP 1: Enable Gmail App Password                               ║
+║  ────────────────────────────────────────────────────────           ║
+║  1. Go to: https://myaccount.google.com/security                    ║
+║  2. Enable "2-Step Verification"                                    ║
+║  3. Click "App passwords"                                           ║
+║  4. Generate password for "Mail" app                                ║
+║  5. Copy the 16-character password                                  ║
+║                                                                      ║
+║  ✅ STEP 2: Update .env.local                                       ║
+║  ────────────────────────────────────────────────────────           ║
+║  Edit: .env.local                                                   ║
+║                                                                      ║
+║  EMAIL_USER=youremail@gmail.com                                     ║
+║  EMAIL_APP_PASSWORD=abcdefghijklmnop                                ║
+║  NEXT_PUBLIC_APP_URL=http://localhost:3000                          ║
+║                                                                      ║
+║  ⚠️  Important: Remove all spaces from the App Password!            ║
+║                                                                      ║
+║  ✅ STEP 3: Restart Server                                          ║
+║  ────────────────────────────────────────────────────────           ║
+║  Terminal: Ctrl + C                                                 ║
+║  Then run: npm run dev                                              ║
+║                                                                      ║
+║  ✅ STEP 4: Test It!                                                ║
+║  ────────────────────────────────────────────────────────           ║
+║  1. Open: http://localhost:3000/interview                           ║
+║  2. Click "Schedule Interview"                                      ║
+║  3. Fill form with your test email                                  ║
+║  4. Click "Schedule Interview"                                      ║
+║  5. Check your inbox! 📧                                            ║
+║                                                                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  📧 WHAT HAPPENS WHEN YOU SCHEDULE?                                 ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  ✓ Interview saved to system                                        ║
+║  ✓ Beautiful HTML email sent to candidate                           ║
+║  ✓ Email includes meeting link                                      ║
+║  ✓ Email includes all interview details                             ║
+║  ✓ Success notification shown                                       ║
+║                                                                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  🎯 TROUBLESHOOTING                                                  ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  ❌ "Invalid login" error?                                          ║
+║     → Check you're using App Password (not regular password)        ║
+║     → Verify 2-Step Verification is enabled                         ║
+║     → Remove spaces from password                                   ║
+║                                                                      ║
+║  ❌ No email received?                                              ║
+║     → Check spam folder                                             ║
+║     → Verify candidate email is correct                             ║
+║     → Check browser console for errors                              ║
+║                                                                      ║
+║  ❌ Server error?                                                    ║
+║     → Restart server after changing .env.local                      ║
+║     → Check terminal for detailed error messages                    ║
+║                                                                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  📚 FULL DOCUMENTATION                                               ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  See: EMAIL_SETUP_GUIDE.md for detailed instructions                ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝

@@ -47,12 +47,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Plus, Pencil, Trash2, Upload, MessageSquare, Users, Calendar as CalendarIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, MessageSquare, Users, Calendar as CalendarIcon, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { getUserInitials } from '@/lib/utils-user'
 import Copilot from '@/components/copilot'
 import Calendar from '@/components/calendar-range'
+import StudentImport from '@/components/student-import'
 import { format } from 'date-fns'
+import * as XLSX from 'xlsx'
 
 export default function StudentsByClassPage() {
   const params = useParams()
@@ -84,6 +86,7 @@ export default function StudentsByClassPage() {
     dateRange: { from: new Date(), to: null },
   })
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [displayedColumns, setDisplayedColumns] = useState(['photo', 'studentId', 'name', 'email', 'phone', 'batch'])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -246,7 +249,7 @@ export default function StudentsByClassPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!formData.name || !formData.email) {
       toast({
         title: "Error",
@@ -261,14 +264,14 @@ export default function StudentsByClassPage() {
       const method = editingStudent ? 'PUT' : 'POST'
       const body = editingStudent
         ? {
-            id: editingStudent.id,
-            ...formData,
-            classId: classId,
-          }
+          id: editingStudent.id,
+          ...formData,
+          classId: classId,
+        }
         : {
-            ...formData,
-            classId: classId,
-          }
+          ...formData,
+          classId: classId,
+        }
 
       const response = await fetch(url, {
         method,
@@ -350,14 +353,14 @@ export default function StudentsByClassPage() {
     if (!startDate) return null
     const start = new Date(startDate)
     const end = new Date(start)
-    
+
     if (durationType === 'daily') {
       end.setDate(end.getDate() + 1)
     } else {
       // monthly
       end.setMonth(end.getMonth() + 1)
     }
-    
+
     return end
   }
 
@@ -425,12 +428,12 @@ export default function StudentsByClassPage() {
       const newSelectedIds = isSelected
         ? prev.selectedStudentIds.filter(id => id !== studentId)
         : [...prev.selectedStudentIds, studentId]
-      
+
       // If the removed student was the squad leader, clear the leader
-      const newLeaderId = (isSelected && prev.squadLeaderId === studentId) 
-        ? '' 
+      const newLeaderId = (isSelected && prev.squadLeaderId === studentId)
+        ? ''
         : prev.squadLeaderId
-      
+
       return {
         ...prev,
         selectedStudentIds: newSelectedIds,
@@ -441,7 +444,7 @@ export default function StudentsByClassPage() {
 
   const handleSquadSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!squadFormData.name.trim()) {
       toast({
         title: "Error",
@@ -481,10 +484,10 @@ export default function StudentsByClassPage() {
     try {
       const { getSelectedBatch } = await import('@/lib/utils-batch')
       const batch = getSelectedBatch()
-      
+
       const startDate = squadFormData.dateRange.from
       const endDate = squadFormData.dateRange.to || calculateEndDate(startDate, squadFormData.durationType)
-      
+
       const response = await fetch('/api/squads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -521,6 +524,57 @@ export default function StudentsByClassPage() {
       toast({
         title: "Error",
         description: "Failed to create squad",
+        variant: "destructive",
+      })
+    }
+  }
+
+
+  const handleExport = () => {
+    try {
+      // Prepare data for export with proper column names
+      const columnLabels = {
+        photo: 'Photo',
+        studentId: 'Student ID',
+        name: 'Name',
+        email: 'Email',
+        phone: 'Phone',
+        batch: 'Batch',
+      }
+
+      const exportData = students.map(student => {
+        const row = {}
+        displayedColumns.forEach(col => {
+          const label = columnLabels[col] || col
+          // Get value from student object, handling both standard and custom fields
+          const value = student[col] !== undefined ? student[col] : ''
+          row[label] = value || ''
+        })
+        return row
+      })
+
+      // Create workbook
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Students')
+
+      // Generate filename
+      const className = classData?.name || 'students'
+      const sanitizedClassName = className.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      const filename = `${sanitizedClassName}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Download
+      XLSX.writeFile(workbook, filename)
+
+      toast({
+        title: "Success",
+        description: "Data exported successfully",
+      })
+    } catch (error) {
+      console.error('Error exporting data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to export data",
         variant: "destructive",
       })
     }
@@ -566,6 +620,20 @@ export default function StudentsByClassPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-normal"
+                onClick={handleExport}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              <StudentImport
+                classId={classId}
+                onImportComplete={fetchStudents}
+                onColumnsChange={setDisplayedColumns}
+              />
               <Button
                 variant="outline"
                 size="sm"
@@ -650,8 +718,8 @@ export default function StudentsByClassPage() {
                         </Popover>
                         {squadFormData.dateRange?.from && squadFormData.dateRange?.to && (
                           <div className="text-xs text-muted-foreground">
-                            Start: {format(squadFormData.dateRange.from, 'MMM dd, yyyy')} | 
-                            End: {format(squadFormData.dateRange.to, 'MMM dd, yyyy')} | 
+                            Start: {format(squadFormData.dateRange.from, 'MMM dd, yyyy')} |
+                            End: {format(squadFormData.dateRange.to, 'MMM dd, yyyy')} |
                             Duration: {squadFormData.durationType === 'daily' ? '1 day' : '1 month'}
                           </div>
                         )}
@@ -727,230 +795,264 @@ export default function StudentsByClassPage() {
                 </DialogContent>
               </Dialog>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" onClick={() => handleOpenDialog()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Student
-                </Button>
-              </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <form onSubmit={handleSubmit}>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingStudent ? 'Edit Student' : 'Create New Student'}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {editingStudent ? 'Update student information' : 'Add a new student to this class'}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-center gap-2">
-                            <Avatar className="h-24 w-24">
-                              {photoPreview && <AvatarImage src={photoPreview} alt="Student photo" />}
-                              <AvatarFallback className="text-lg">
-                                {getUserInitials(formData.name || 'Student')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <Label htmlFor="photo" className="cursor-pointer">
-                              <Button type="button" variant="outline" size="sm" asChild>
-                                <span>
-                                  <Upload className="mr-2 h-4 w-4" />
-                                  Upload Photo
-                                </span>
-                              </Button>
-                              <Input
-                                id="photo"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handlePhotoChange}
-                              />
-                            </Label>
-                          </div>
-                          <div className="flex-1 grid gap-4">
-                            <div className="grid gap-2">
-                              <Label htmlFor="name">Student Name *</Label>
-                              <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., John Doe"
-                                required
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="email">Email *</Label>
-                              <Input
-                                id="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="e.g., john.doe@example.com"
-                                required
-                              />
-                            </div>
-                          </div>
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={() => handleOpenDialog()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Student
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingStudent ? 'Edit Student' : 'Create New Student'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingStudent ? 'Update student information' : 'Add a new student to this class'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center gap-2">
+                          <Avatar className="h-24 w-24">
+                            {photoPreview && <AvatarImage src={photoPreview} alt="Student photo" />}
+                            <AvatarFallback className="text-lg">
+                              {getUserInitials(formData.name || 'Student')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <Label htmlFor="photo" className="cursor-pointer">
+                            <Button type="button" variant="outline" size="sm" asChild>
+                              <span>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Photo
+                              </span>
+                            </Button>
+                            <Input
+                              id="photo"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handlePhotoChange}
+                            />
+                          </Label>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="flex-1 grid gap-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone Number</Label>
+                            <Label htmlFor="name">Student Name *</Label>
                             <Input
-                              id="phone"
-                              type="tel"
-                              value={formData.phone}
-                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                              placeholder="e.g., +1234567890"
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              placeholder="e.g., John Doe"
+                              required
                             />
                           </div>
                           <div className="grid gap-2">
-                            <Label htmlFor="batch">Batch</Label>
+                            <Label htmlFor="email">Email *</Label>
                             <Input
-                              id="batch"
-                              value={formData.batch}
-                              onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                              placeholder="e.g., Batch-1, Batch-2"
+                              id="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              placeholder="e.g., john.doe@example.com"
+                              required
                             />
-                            <p className="text-xs text-muted-foreground">
-                              {new Date().getFullYear()} = Batch-{new Date().getFullYear() - 2023}
-                            </p>
                           </div>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                          Cancel
-                        </Button>
-                        <Button type="submit">
-                          {editingStudent ? 'Update' : 'Create'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="e.g., +1234567890"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="batch">Batch</Label>
+                          <Input
+                            id="batch"
+                            value={formData.batch}
+                            onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                            placeholder="e.g., Batch-1, Batch-2"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {new Date().getFullYear()} = Batch-{new Date().getFullYear() - 2023}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        {editingStudent ? 'Update' : 'Create'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
           {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-muted-foreground">Loading students...</div>
-                </div>
-              ) : students.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <p className="text-muted-foreground mb-4">
-                      {classData ? `No students found in ${classData.name}` : 'No students found'}
-                    </p>
-                    <Button onClick={() => handleOpenDialog()}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add First Student
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full overflow-hidden rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300"
-                            checked={selectedStudents.length === students.length && students.length > 0}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedStudents(students.map(s => s.id))
-                                setSelectedStudentsData(students.map(s => ({
-                                  id: s.id,
-                                  name: s.name,
-                                  studentId: s.studentId,
-                                  email: s.email,
-                                  batch: s.batch,
-                                  phone: s.phone
-                                })))
-                              } else {
-                                setSelectedStudents([])
-                                setSelectedStudentsData([])
-                              }
-                            }}
-                          />
-                        </TableHead>
-                        <TableHead className="text-sm">Photo</TableHead>
-                        <TableHead className="text-sm">Student ID</TableHead>
-                        <TableHead className="text-sm">Name</TableHead>
-                        <TableHead className="text-sm">Email</TableHead>
-                        <TableHead className="text-sm">Phone</TableHead>
-                        <TableHead className="text-sm">Batch</TableHead>
-                        <TableHead className="text-right text-sm">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {students.map((student) => (
-                        <TableRow key={student.id}>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300"
-                              checked={selectedStudents.includes(student.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedStudents([...selectedStudents, student.id])
-                                  setSelectedStudentsData([...selectedStudentsData, {
-                                    id: student.id,
-                                    name: student.name,
-                                    studentId: student.studentId,
-                                    email: student.email,
-                                    batch: student.batch,
-                                    phone: student.phone
-                                  }])
-                                } else {
-                                  setSelectedStudents(selectedStudents.filter(id => id !== student.id))
-                                  setSelectedStudentsData(selectedStudentsData.filter(s => s.id !== student.id))
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Avatar className="h-10 w-10">
-                              {student.photo && <AvatarImage src={student.photo} alt={student.name} />}
-                              <AvatarFallback>
-                                {getUserInitials(student.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{student.studentId}</TableCell>
-                          <TableCell className="text-sm">{student.name}</TableCell>
-                          <TableCell className="text-xs lowercase">{student.email}</TableCell>
-                          <TableCell className="text-xs">{student.phone || '-'}</TableCell>
-                          <TableCell className="text-xs">{student.batch || '-'}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleOpenDialog(student)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleDelete(student.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading students...</div>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">
+                  {classData ? `No students found in ${classData.name}` : 'No students found'}
+                </p>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add First Student
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300"
+                        checked={selectedStudents.length === students.length && students.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStudents(students.map(s => s.id))
+                            setSelectedStudentsData(students.map(s => ({
+                              id: s.id,
+                              name: s.name,
+                              studentId: s.studentId,
+                              email: s.email,
+                              batch: s.batch,
+                              phone: s.phone
+                            })))
+                          } else {
+                            setSelectedStudents([])
+                            setSelectedStudentsData([])
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    {displayedColumns.includes('photo') && (
+                      <TableHead className="text-sm">Photo</TableHead>
+                    )}
+                    {displayedColumns.includes('studentId') && (
+                      <TableHead className="text-sm">Student ID</TableHead>
+                    )}
+                    {displayedColumns.includes('name') && (
+                      <TableHead className="text-sm">Name</TableHead>
+                    )}
+                    {displayedColumns.includes('email') && (
+                      <TableHead className="text-sm">Email</TableHead>
+                    )}
+                    {displayedColumns.includes('phone') && (
+                      <TableHead className="text-sm">Phone</TableHead>
+                    )}
+                    {displayedColumns.includes('batch') && (
+                      <TableHead className="text-sm">Batch</TableHead>
+                    )}
+                    {displayedColumns.filter(col => !['photo', 'studentId', 'name', 'email', 'phone', 'batch'].includes(col)).map(col => (
+                      <TableHead key={col} className="text-sm">{col}</TableHead>
+                    ))}
+                    <TableHead className="text-right text-sm">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300"
+                          checked={selectedStudents.includes(student.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudents([...selectedStudents, student.id])
+                              setSelectedStudentsData([...selectedStudentsData, {
+                                id: student.id,
+                                name: student.name,
+                                studentId: student.studentId,
+                                email: student.email,
+                                batch: student.batch,
+                                phone: student.phone
+                              }])
+                            } else {
+                              setSelectedStudents(selectedStudents.filter(id => id !== student.id))
+                              setSelectedStudentsData(selectedStudentsData.filter(s => s.id !== student.id))
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      {displayedColumns.includes('photo') && (
+                        <TableCell>
+                          <Avatar className="h-10 w-10">
+                            {student.photo && <AvatarImage src={student.photo} alt={student.name} />}
+                            <AvatarFallback>
+                              {getUserInitials(student.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                      )}
+                      {displayedColumns.includes('studentId') && (
+                        <TableCell className="font-mono text-xs">{student.studentId}</TableCell>
+                      )}
+                      {displayedColumns.includes('name') && (
+                        <TableCell className="text-sm">{student.name}</TableCell>
+                      )}
+                      {displayedColumns.includes('email') && (
+                        <TableCell className="text-xs lowercase">{student.email}</TableCell>
+                      )}
+                      {displayedColumns.includes('phone') && (
+                        <TableCell className="text-xs">{student.phone || '-'}</TableCell>
+                      )}
+                      {displayedColumns.includes('batch') && (
+                        <TableCell className="text-xs">{student.batch || '-'}</TableCell>
+                      )}
+                      {displayedColumns.filter(col => !['photo', 'studentId', 'name', 'email', 'phone', 'batch'].includes(col)).map(col => {
+                        // For custom columns, get the value directly
+                        const value = student[col] !== undefined ? student[col] : '-'
+                        return (
+                          <TableCell key={col} className="text-xs">{String(value || '-')}</TableCell>
+                        )
+                      })}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleOpenDialog(student)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleDelete(student.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
-        <Copilot 
-          isOpen={showCopilot} 
+        <Copilot
+          isOpen={showCopilot}
           onClose={() => setShowCopilot(false)}
           selectedStudents={selectedStudentsData}
           onStudentRemove={handleStudentRemove}

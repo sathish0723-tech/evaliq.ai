@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AppSidebar } from '@/components/app-sidebar'
 import {
   Breadcrumb,
@@ -47,6 +48,7 @@ import {
 } from '@/components/ui/select'
 
 export default function ClassesPage() {
+  const router = useRouter()
   const [classes, setClasses] = useState([])
   const [coaches, setCoaches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -108,8 +110,8 @@ export default function ClassesPage() {
   const handleOpenDialog = (cls = null) => {
     if (cls) {
       setEditingClass(cls)
-      setFormData({ 
-        name: cls.name, 
+      setFormData({
+        name: cls.name,
         description: cls.description || '',
         coachId: cls.coachId || 'none'
       })
@@ -128,22 +130,22 @@ export default function ClassesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     try {
       const url = '/api/classes'
       const method = editingClass ? 'PUT' : 'POST'
       const body = editingClass
-        ? { 
-            id: editingClass.id, 
-            name: formData.name,
-            description: formData.description,
-            coachId: formData.coachId !== 'none' ? formData.coachId : ''
-          }
+        ? {
+          id: editingClass.id,
+          name: formData.name,
+          description: formData.description,
+          coachId: formData.coachId !== 'none' ? formData.coachId : ''
+        }
         : {
-            name: formData.name,
-            description: formData.description,
-            coachId: formData.coachId !== 'none' ? formData.coachId : ''
-          }
+          name: formData.name,
+          description: formData.description,
+          coachId: formData.coachId !== 'none' ? formData.coachId : ''
+        }
 
       const response = await fetch(url, {
         method,
@@ -161,6 +163,10 @@ export default function ClassesPage() {
         })
         handleCloseDialog()
         fetchClasses()
+        // Redirect to class detail page after creation
+        if (!editingClass && result.class?.classId) {
+          router.push(`/classes/${result.class.classId}`)
+        }
       } else {
         toast({
           title: "Error",
@@ -253,135 +259,135 @@ export default function ClassesPage() {
                   Add Class
                 </Button>
               </DialogTrigger>
-                  <DialogContent>
-                    <form onSubmit={handleSubmit}>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingClass ? 'Edit Class' : 'Create New Class'}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {editingClass ? 'Update class information' : 'Add a new class to your system'}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="name">Class Name *</Label>
-                          <Input
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g., Math 101"
-                            required
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Input
-                            id="description"
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Optional description"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="coach">Coach</Label>
-                          <Select 
-                            value={formData.coachId} 
-                            onValueChange={(value) => setFormData({ ...formData, coachId: value })}
-                          >
-                            <SelectTrigger id="coach">
-                              <SelectValue placeholder="Select a coach" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No Coach</SelectItem>
-                              {coaches.map((coach) => (
-                                <SelectItem key={coach.id} value={coach.coachId}>
-                                  {coach.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                          Cancel
-                        </Button>
-                        <Button type="submit">
-                          {editingClass ? 'Update' : 'Create'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+              <DialogContent>
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingClass ? 'Edit Class' : 'Create New Class'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingClass ? 'Update class information' : 'Add a new class to your system'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Class Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Math 101"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Optional description"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="coach">Coach</Label>
+                      <Select
+                        value={formData.coachId}
+                        onValueChange={(value) => setFormData({ ...formData, coachId: value })}
+                      >
+                        <SelectTrigger id="coach">
+                          <SelectValue placeholder="Select a coach" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Coach</SelectItem>
+                          {coaches.map((coach) => (
+                            <SelectItem key={coach.id} value={coach.coachId}>
+                              {coach.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      {editingClass ? 'Update' : 'Create'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
           {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-muted-foreground">Loading classes...</div>
-                </div>
-              ) : classes.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <p className="text-muted-foreground mb-4">No classes found</p>
-                    <Button onClick={() => handleOpenDialog()}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Class
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full overflow-hidden rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-sm">Class ID</TableHead>
-                        <TableHead className="text-sm">Name</TableHead>
-                        <TableHead className="text-sm">Description</TableHead>
-                        <TableHead className="text-sm">Coach</TableHead>
-                        <TableHead className="text-sm">Students</TableHead>
-                        <TableHead className="text-right text-sm">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {classes.map((cls) => (
-                        <TableRow key={cls.id}>
-                          <TableCell className="font-mono text-xs">{cls.classId}</TableCell>
-                          <TableCell className="text-sm">{cls.name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {cls.description || '-'}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {cls.coachName || '-'}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {cls.studentCount || 0}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleOpenDialog(cls)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleDelete(cls.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading classes...</div>
+            </div>
+          ) : classes.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">No classes found</p>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Class
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-sm">Class ID</TableHead>
+                    <TableHead className="text-sm">Name</TableHead>
+                    <TableHead className="text-sm">Description</TableHead>
+                    <TableHead className="text-sm">Coach</TableHead>
+                    <TableHead className="text-sm">Students</TableHead>
+                    <TableHead className="text-right text-sm">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classes.map((cls) => (
+                    <TableRow key={cls.id}>
+                      <TableCell className="font-mono text-xs">{cls.classId}</TableCell>
+                      <TableCell className="text-sm">{cls.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {cls.description || '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {cls.coachName || '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {cls.studentCount || 0}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleOpenDialog(cls)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleDelete(cls.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

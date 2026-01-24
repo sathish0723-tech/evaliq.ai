@@ -36,8 +36,8 @@ const portfolioItems = [
 
 function CaseStudyCard({ image, alt, className = '', style, isDarkTheme }) {
   return (
-    <div 
-      className={`relative overflow-hidden rounded-lg bg-gray-300 cursor-pointer shadow-lg group ${className}`} 
+    <div
+      className={`relative overflow-hidden rounded-lg bg-gray-300 cursor-pointer shadow-lg group ${className}`}
       style={style}
     >
       <img
@@ -58,7 +58,15 @@ export default function OnboardingClient() {
   const [errorMessage, setErrorMessage] = useState(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const isDarkTheme = theme === 'dark'
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch: only use theme after component mounts
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Only apply theme-dependent styles after mounting to avoid hydration mismatch
+  const isDarkTheme = mounted && theme === 'dark'
 
   // Split items into 3 columns for masonry layout
   const column1 = portfolioItems.filter((_, i) => i % 3 === 0)
@@ -78,7 +86,7 @@ export default function OnboardingClient() {
     e.preventDefault()
     setIsLoading(true)
     setErrorMessage(null)
-    
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -108,7 +116,7 @@ export default function OnboardingClient() {
   const handleGoogleAuth = async () => {
     setIsLoading(true)
     setErrorMessage(null)
-    
+
     try {
       // Use NextAuth signIn function - this will redirect to Google OAuth
       await signIn('google', {
@@ -126,9 +134,9 @@ export default function OnboardingClient() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-background via-background to-muted relative">
       {/* Logo and Brand Name - Top Left Corner */}
       <div className="absolute top-4 left-4 flex items-center gap-1.5 z-10">
-        <img 
-          src="https://res.cloudinary.com/difauucm4/image/upload/v1766603112/student-management/logos/aiivy45l4cirjv5cxbkn.png" 
-          alt="Platform Logo" 
+        <img
+          src="https://res.cloudinary.com/difauucm4/image/upload/v1766603112/student-management/logos/aiivy45l4cirjv5cxbkn.png"
+          alt="Platform Logo"
           className="h-10 w-10 object-contain"
         />
         <span className="text-2xl font-bold">evaliq</span>
@@ -138,7 +146,7 @@ export default function OnboardingClient() {
         <div className="w-full max-w-md">
           <Card className="border-2 shadow-lg">
             <CardHeader className="space-y-1 text-center">
-            
+
               <CardDescription className="text-base">
                 Sign in to your account to get started
               </CardDescription>

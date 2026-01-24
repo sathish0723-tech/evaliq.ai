@@ -52,20 +52,32 @@ export async function GET(request) {
       }
     ]).toArray()
 
-    // Format students for response
-    const formattedStudents = students.map(student => ({
-      id: student._id.toString(),
-      studentId: student.studentId,
-      name: student.name,
-      email: student.email,
-      phone: student.phone || '',
-      photo: student.photo || '',
-      classId: student.classId || '',
-      batch: student.batch || '',
-      attendanceStatus: student.attendanceStatus || 'present',
-      createdAt: student.createdAt,
-      updatedAt: student.updatedAt,
-    }))
+    // Format students for response (include all fields)
+    const formattedStudents = students.map(student => {
+      const formatted = {
+        id: student._id.toString(),
+        studentId: student.studentId,
+        name: student.name,
+        email: student.email,
+        phone: student.phone || '',
+        photo: student.photo || '',
+        classId: student.classId || '',
+        batch: student.batch || '',
+        attendanceStatus: student.attendanceStatus || 'present',
+        createdAt: student.createdAt,
+        updatedAt: student.updatedAt,
+      }
+      
+      // Add all custom fields
+      const systemFields = ['_id', 'studentId', 'name', 'email', 'phone', 'photo', 'classId', 'batch', 'managementId', 'attendanceStatus', 'createdAt', 'updatedAt']
+      Object.keys(student).forEach(key => {
+        if (!systemFields.includes(key)) {
+          formatted[key] = student[key]
+        }
+      })
+      
+      return formatted
+    })
 
     return NextResponse.json({ students: formattedStudents })
   } catch (error) {
@@ -102,7 +114,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { name, email, phone, photo, classId, batch } = body
+    const { name, email, phone, photo, classId, batch, ...customFields } = body
 
     if (!name || !email) {
       return NextResponse.json(
@@ -147,9 +159,9 @@ export async function POST(request) {
     // Generate unique student ID
     const studentId = await generateStudentId(studentsCollection, session.managementId)
 
-    // Create student
+    // Create student with dynamic fields
     const now = new Date()
-    const result = await studentsCollection.insertOne({
+    const studentDoc = {
       studentId,
       name,
       email,
@@ -161,7 +173,17 @@ export async function POST(request) {
       attendanceStatus: 'present',
       createdAt: now,
       updatedAt: now,
+    }
+
+    // Add custom fields (exclude standard fields and system fields)
+    const systemFields = ['studentId', 'name', 'email', 'phone', 'photo', 'classId', 'batch', 'managementId', 'attendanceStatus', 'createdAt', 'updatedAt']
+    Object.keys(customFields).forEach(key => {
+      if (!systemFields.includes(key)) {
+        studentDoc[key] = customFields[key]
+      }
     })
+
+    const result = await studentsCollection.insertOne(studentDoc)
 
     return NextResponse.json({
       success: true,
@@ -208,7 +230,7 @@ export async function PUT(request) {
     }
 
     const body = await request.json()
-    const { id, name, email, phone, photo, classId, batch } = body
+    const { id, name, email, phone, photo, classId, batch, ...customFields } = body
 
     if (!id || !name || !email) {
       return NextResponse.json(
@@ -265,20 +287,28 @@ export async function PUT(request) {
       }
     }
 
-    // Update student
+    // Update student with dynamic fields
+    const updateDoc = {
+      name,
+      email,
+      phone: phone || '',
+      photo: photo || '',
+      classId: classId || '',
+      batch: batch || '',
+      updatedAt: new Date(),
+    }
+
+    // Add custom fields
+    const systemFields = ['id', 'studentId', 'name', 'email', 'phone', 'photo', 'classId', 'batch', 'managementId', 'attendanceStatus', 'createdAt', 'updatedAt']
+    Object.keys(customFields).forEach(key => {
+      if (!systemFields.includes(key)) {
+        updateDoc[key] = customFields[key]
+      }
+    })
+
     await studentsCollection.updateOne(
       { _id: new ObjectId(id) },
-      {
-        $set: {
-          name,
-          email,
-          phone: phone || '',
-          photo: photo || '',
-          classId: classId || '',
-          batch: batch || '',
-          updatedAt: new Date(),
-        },
-      }
+      { $set: updateDoc }
     )
 
     return NextResponse.json({

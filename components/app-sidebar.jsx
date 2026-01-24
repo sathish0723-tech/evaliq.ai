@@ -15,6 +15,7 @@ import {
   Sparkles,
   Activity,
   ClipboardList,
+  Briefcase,
 } from "lucide-react"
 
 import { NavMain } from '@/components/nav-main'
@@ -48,6 +49,7 @@ export function AppSidebar({ ...props }) {
     if (pathname.startsWith('/memories')) return 'memories'
     if (pathname.startsWith('/copilot')) return 'copilot'
     if (pathname.startsWith('/assessments')) return 'assessments'
+    if (pathname.startsWith('/interview')) return 'interview'
     if (pathname.startsWith('/settings')) return 'settings'
     return null
   }
@@ -154,6 +156,18 @@ export function AppSidebar({ ...props }) {
         {
           title: "Memories",
           url: "/memories",
+        },
+      ],
+    },
+    {
+      title: "Career Accelerator",
+      url: "#",
+      icon: Briefcase,
+      isActive: activeSection === 'interview',
+      items: [
+        {
+          title: "Interview Process",
+          url: "/interview",
         },
       ],
     },
