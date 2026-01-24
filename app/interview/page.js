@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AppSidebar } from '@/components/app-sidebar'
 import {
@@ -64,7 +64,10 @@ import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import Script from 'next/script'
 
-export default function InterviewPage() {
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
+function InterviewPageContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { toast } = useToast()
@@ -650,5 +653,14 @@ export default function InterviewPage() {
                 </SidebarInset>
             </SidebarProvider>
         </>
+    )
+}
+
+// Wrap in Suspense to handle useSearchParams
+export default function InterviewPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <InterviewPageContent />
+        </Suspense>
     )
 }
