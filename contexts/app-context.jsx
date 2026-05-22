@@ -10,6 +10,8 @@ export function AppProvider({ children }) {
   const [students, setStudents] = useState([])
   const [management, setManagement] = useState(null)
   const [user, setUser] = useState(null)
+  const [batches, setBatches] = useState([])
+  const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
 
@@ -75,27 +77,59 @@ export function AppProvider({ children }) {
     }
   }
 
+  // Fetch batches
+  const fetchBatches = async () => {
+    try {
+      const response = await fetch('/api/batches', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setBatches(data.batches || [])
+      }
+    } catch (error) {
+      console.error('Error fetching batches:', error)
+    }
+  }
+
+  // Fetch conversations
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch('/api/conversations', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setConversations(data.conversations || [])
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error)
+    }
+  }
+
   // Initialize data on mount - only fetch once
   useEffect(() => {
     if (initialized) return // Prevent multiple initializations
-    
+
     const initialize = async () => {
       setLoading(true)
       setInitialized(true)
-      
+
       // Fetch essential data (management and user) first
       await Promise.all([
         fetchManagement(),
         fetchUser(),
       ])
-      
+
       setLoading(false)
-      
+
       // Fetch classes and students in background (non-blocking)
       fetchClasses()
       fetchStudents()
+      fetchBatches()
+      fetchConversations()
     }
-    
+
     initialize()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run once on mount
@@ -105,13 +139,19 @@ export function AppProvider({ children }) {
     students,
     management,
     user,
+    batches,
+    conversations,
     loading,
     fetchClasses,
     fetchStudents,
     fetchManagement,
     fetchUser,
+    fetchBatches,
+    fetchConversations,
     setClasses,
     setStudents,
+    setBatches,
+    setConversations,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

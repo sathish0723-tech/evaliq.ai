@@ -48,7 +48,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { useApp } from '@/contexts/app-context'
+
 export default function CoachesPage() {
+  const { batches } = useApp()
   const [coaches, setCoaches] = useState([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -60,13 +63,11 @@ export default function CoachesPage() {
     photo: '',
     batch: '',
   })
-  const [batches, setBatches] = useState([])
   const [photoPreview, setPhotoPreview] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
     fetchCoaches()
-    fetchBatches()
   }, [])
 
   const fetchCoaches = async () => {
@@ -98,19 +99,7 @@ export default function CoachesPage() {
     }
   }
 
-  const fetchBatches = async () => {
-    try {
-      const response = await fetch('/api/batches', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBatches(data.batches || [])
-      }
-    } catch (error) {
-      console.error('Error fetching batches:', error)
-    }
-  }
+
 
   const handleOpenDialog = (coach = null) => {
     if (coach) {
@@ -198,7 +187,7 @@ export default function CoachesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!formData.name || !formData.email) {
       toast({
         title: "Error",
@@ -251,7 +240,7 @@ export default function CoachesPage() {
         fetchCoaches()
       } else {
         console.error('Coach API error:', { status: response.status, statusText: response.statusText, result })
-        
+
         // If coach already exists, show helpful message
         if (result && result.existingCoach && !editingCoach) {
           const existingCoachName = result.existingCoach.name || 'Unknown'
@@ -275,7 +264,7 @@ export default function CoachesPage() {
           } else if (response.status >= 500) {
             errorMessage = "Server error - Please try again later"
           }
-          
+
           toast({
             title: "Error",
             description: errorMessage,
@@ -368,174 +357,174 @@ export default function CoachesPage() {
                   Add Coach
                 </Button>
               </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <form onSubmit={handleSubmit}>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingCoach ? 'Edit Coach' : 'Create New Coach'}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {editingCoach ? 'Update coach information' : 'Add a new coach to your system'}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-center gap-2">
-                            <Avatar className="h-24 w-24">
-                              {photoPreview && <AvatarImage src={photoPreview} alt="Coach photo" />}
-                              <AvatarFallback className="text-lg">
-                                {getUserInitials(formData.name || 'Coach')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <Label htmlFor="photo" className="cursor-pointer">
-                              <Button type="button" variant="outline" size="sm" asChild>
-                                <span>
-                                  <Upload className="mr-2 h-4 w-4" />
-                                  Upload Photo
-                                </span>
-                              </Button>
-                              <Input
-                                id="photo"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handlePhotoChange}
-                              />
-                            </Label>
-                          </div>
-                          <div className="flex-1 grid gap-4">
-                            <div className="grid gap-2">
-                              <Label htmlFor="name">Coach Name *</Label>
-                              <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., John Doe"
-                                required
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="email">Email *</Label>
-                              <Input
-                                id="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="e.g., john.doe@example.com"
-                                required
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="phone">Phone Number</Label>
+              <DialogContent className="max-w-2xl">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingCoach ? 'Edit Coach' : 'Create New Coach'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingCoach ? 'Update coach information' : 'Add a new coach to your system'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-center gap-2">
+                        <Avatar className="h-24 w-24">
+                          {photoPreview && <AvatarImage src={photoPreview} alt="Coach photo" />}
+                          <AvatarFallback className="text-lg">
+                            {getUserInitials(formData.name || 'Coach')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <Label htmlFor="photo" className="cursor-pointer">
+                          <Button type="button" variant="outline" size="sm" asChild>
+                            <span>
+                              <Upload className="mr-2 h-4 w-4" />
+                              Upload Photo
+                            </span>
+                          </Button>
                           <Input
-                            id="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="e.g., +1234567890"
+                            id="photo"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handlePhotoChange}
+                          />
+                        </Label>
+                      </div>
+                      <div className="flex-1 grid gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Coach Name *</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="e.g., John Doe"
+                            required
                           />
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="batch">Batch</Label>
-                          <Select
-                            value={formData.batch || undefined}
-                            onValueChange={(value) => setFormData({ ...formData, batch: value || '' })}
-                          >
-                            <SelectTrigger id="batch">
-                              <SelectValue placeholder="Select a batch (optional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {batches.map((batch) => (
-                                <SelectItem key={batch} value={batch}>
-                                  {batch}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="email">Email *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            placeholder="e.g., john.doe@example.com"
+                            required
+                          />
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                          Cancel
-                        </Button>
-                        <Button type="submit">
-                          {editingCoach ? 'Update' : 'Create'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="e.g., +1234567890"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="batch">Batch</Label>
+                      <Select
+                        value={formData.batch || undefined}
+                        onValueChange={(value) => setFormData({ ...formData, batch: value || '' })}
+                      >
+                        <SelectTrigger id="batch">
+                          <SelectValue placeholder="Select a batch (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {batches.map((batch) => (
+                            <SelectItem key={batch} value={batch}>
+                              {batch}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      {editingCoach ? 'Update' : 'Create'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
           {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-muted-foreground">Loading coaches...</div>
-                </div>
-              ) : coaches.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <p className="text-muted-foreground mb-4">No coaches found</p>
-                    <Button onClick={() => handleOpenDialog()}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Coach
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Photo</TableHead>
-                        <TableHead>Coach ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Batch</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {coaches.map((coach) => (
-                        <TableRow key={coach.id}>
-                          <TableCell>
-                            <Avatar className="h-10 w-10">
-                              {coach.photo && <AvatarImage src={coach.photo} alt={coach.name} />}
-                              <AvatarFallback>
-                                {getUserInitials(coach.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">{coach.coachId}</TableCell>
-                          <TableCell className="font-medium">{coach.name}</TableCell>
-                          <TableCell className="lowercase">{coach.email}</TableCell>
-                          <TableCell>{coach.phone || '-'}</TableCell>
-                          <TableCell>{coach.batch || '-'}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenDialog(coach)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(coach.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading coaches...</div>
+            </div>
+          ) : coaches.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">No coaches found</p>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Coach
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Photo</TableHead>
+                    <TableHead>Coach ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Batch</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {coaches.map((coach) => (
+                    <TableRow key={coach.id}>
+                      <TableCell>
+                        <Avatar className="h-10 w-10">
+                          {coach.photo && <AvatarImage src={coach.photo} alt={coach.name} />}
+                          <AvatarFallback>
+                            {getUserInitials(coach.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{coach.coachId}</TableCell>
+                      <TableCell className="font-medium">{coach.name}</TableCell>
+                      <TableCell className="lowercase">{coach.email}</TableCell>
+                      <TableCell>{coach.phone || '-'}</TableCell>
+                      <TableCell>{coach.batch || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDialog(coach)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(coach.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

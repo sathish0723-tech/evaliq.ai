@@ -55,18 +55,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
-  const { management, user, fetchManagement, fetchUser } = useApp()
+  const { management, user, batches, fetchManagement, fetchUser, fetchBatches } = useApp()
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // Management form state
   const [managementName, setManagementName] = useState('')
   const [managementLogo, setManagementLogo] = useState('')
   const [logoPreview, setLogoPreview] = useState('')
   const [logoFile, setLogoFile] = useState(null)
   const managementFileInputRef = useRef(null)
-  
+
   // User form state
   const [userName, setUserName] = useState('')
   const [userEmail, setUserEmail] = useState('')
@@ -76,7 +76,6 @@ export default function SettingsPage() {
   const userFileInputRef = useRef(null)
 
   // Batch management state
-  const [batches, setBatches] = useState([])
   const [selectedBatch, setSelectedBatch] = useState(() => {
     // Initialize from localStorage if available
     if (typeof window !== 'undefined') {
@@ -118,51 +117,37 @@ export default function SettingsPage() {
       setUserPicture(user.picture || '')
       setUserPicturePreview(user.picture || '')
     }
-    fetchBatches()
   }, [management, user])
 
-  const fetchBatches = async () => {
-    try {
-      const response = await fetch('/api/batches', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBatches(data.batches || [])
-        
-        // Handle batch selection logic
-        if (data.batches && data.batches.length > 0) {
-          const savedBatch = typeof window !== 'undefined' ? localStorage.getItem('selectedBatch') : null
-          
-          // If we have a saved batch and it exists in the list, use it
-          if (savedBatch && data.batches.includes(savedBatch)) {
-            if (selectedBatch !== savedBatch) {
-              console.log(`[Settings] Restoring saved batch: "${savedBatch}"`)
-              setSelectedBatch(savedBatch)
-            }
-          } 
-          // If current selectedBatch doesn't exist in the list, reset to first available
-          else if (selectedBatch && !data.batches.includes(selectedBatch)) {
-            console.log(`[Settings] Batch "${selectedBatch}" not found, resetting to "${data.batches[0]}"`)
-            setSelectedBatch(data.batches[0])
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('selectedBatch', data.batches[0])
-            }
-          }
-          // If no batch is selected at all, use first available
-          else if (!selectedBatch) {
-            console.log(`[Settings] No batch selected, setting to first available: "${data.batches[0]}"`)
-            setSelectedBatch(data.batches[0])
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('selectedBatch', data.batches[0])
-            }
-          }
+  useEffect(() => {
+    if (batches && batches.length > 0) {
+      const savedBatch = typeof window !== 'undefined' ? localStorage.getItem('selectedBatch') : null
+
+      // If we have a saved batch and it exists in the list, use it
+      if (savedBatch && batches.includes(savedBatch)) {
+        if (selectedBatch !== savedBatch) {
+          console.log(`[Settings] Restoring saved batch: "${savedBatch}"`)
+          setSelectedBatch(savedBatch)
         }
       }
-    } catch (error) {
-      console.error('Error fetching batches:', error)
+      // If current selectedBatch doesn't exist in the list, reset to first available
+      else if (selectedBatch && !batches.includes(selectedBatch)) {
+        console.log(`[Settings] Batch "${selectedBatch}" not found, resetting to "${batches[0]}"`)
+        setSelectedBatch(batches[0])
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('selectedBatch', batches[0])
+        }
+      }
+      // If no batch is selected at all, use first available
+      else if (!selectedBatch) {
+        console.log(`[Settings] No batch selected, setting to first available: "${batches[0]}"`)
+        setSelectedBatch(batches[0])
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('selectedBatch', batches[0])
+        }
+      }
     }
-  }
+  }, [batches])
 
   const fetchBatchData = async (batchName) => {
     if (!batchName) {
@@ -175,20 +160,20 @@ export default function SettingsPage() {
 
     // Normalize batch name (remove any extra spaces)
     const normalizedBatchName = batchName.trim()
-    
+
     // Cancel any previous fetch by setting ref to null first
     fetchingBatchRef.current = null
-    
+
     // Clear data immediately when fetching new batch
     setBatchStudents([])
     setBatchCoaches([])
     setIsLoadingBatch(true)
-    
+
     // Set the current fetching batch AFTER clearing
     fetchingBatchRef.current = normalizedBatchName
-    
+
     console.log(`[Settings] Fetching data for batch: "${normalizedBatchName}"`)
-    
+
     try {
       const response = await fetch('/api/batches', {
         method: 'POST',
@@ -204,7 +189,7 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         console.log(`[Settings] Received data for batch: "${normalizedBatchName}", students: ${data.students?.length || 0}, coaches: ${data.coaches?.length || 0}`)
-        
+
         // Only set data if we're still fetching the same batch (prevent race conditions)
         if (fetchingBatchRef.current === normalizedBatchName) {
           // Set new data directly
@@ -242,17 +227,17 @@ export default function SettingsPage() {
   useEffect(() => {
     // Cancel any ongoing fetch
     fetchingBatchRef.current = null
-    
+
     // Clear data immediately
     setBatchStudents([])
     setBatchCoaches([])
-    
+
     if (selectedBatch) {
       // Small delay to ensure UI updates with cleared state first
       const timer = setTimeout(() => {
         fetchBatchData(selectedBatch)
       }, 100)
-      
+
       return () => {
         clearTimeout(timer)
         // Cancel fetch if component unmounts or batch changes
@@ -265,15 +250,15 @@ export default function SettingsPage() {
 
   const handleBatchChange = (batchName) => {
     console.log(`[Settings] Batch changed to: "${batchName}"`)
-    
+
     // Cancel any ongoing fetch
     fetchingBatchRef.current = null
-    
+
     // Clear data immediately when changing batch
     setBatchStudents([])
     setBatchCoaches([])
     setIsLoadingBatch(true)
-    
+
     // Update selected batch - this will trigger useEffect
     setSelectedBatch(batchName)
   }
@@ -420,7 +405,7 @@ export default function SettingsPage() {
     setIsLoading(true)
     try {
       let logoUrl = managementLogo
-      
+
       // Upload new logo if selected
       if (logoFile) {
         const formData = new FormData()
@@ -493,7 +478,7 @@ export default function SettingsPage() {
     setIsLoading(true)
     try {
       let pictureUrl = userPicture
-      
+
       // Upload new picture if selected
       if (userPictureFile) {
         const formData = new FormData()
@@ -580,7 +565,7 @@ export default function SettingsPage() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-          
+
           <div className="flex items-center justify-end gap-3 p-2">
             <span className="text-sm text-muted-foreground">
               {theme === 'dark' ? 'Dark Theme' : 'Light Theme'}
@@ -606,9 +591,9 @@ export default function SettingsPage() {
                     <div className="relative">
                       <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-border flex items-center justify-center bg-muted">
                         {logoPreview ? (
-                          <img 
-                            src={logoPreview} 
-                            alt="Management logo" 
+                          <img
+                            src={logoPreview}
+                            alt="Management logo"
                             className="w-full h-full object-contain"
                           />
                         ) : (

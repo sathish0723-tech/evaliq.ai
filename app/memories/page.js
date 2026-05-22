@@ -39,9 +39,11 @@ import { Plus, X, Trash2, Edit, Calendar, Image as ImageIcon } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast'
 import { getSelectedBatch } from '@/lib/utils-batch'
 
+import { useApp } from '@/contexts/app-context'
+
 export default function MemoriesPage() {
+  const { batches } = useApp()
   const [memories, setMemories] = useState([])
-  const [batches, setBatches] = useState([])
   const [selectedBatch, setSelectedBatch] = useState('')
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -61,8 +63,22 @@ export default function MemoriesPage() {
   })
 
   useEffect(() => {
-    fetchBatches()
-  }, [])
+    if (batches && batches.length > 0) {
+      const savedBatch = getSelectedBatch()
+      if (savedBatch && batches.includes(savedBatch)) {
+        if (selectedBatch !== savedBatch) {
+          setSelectedBatch(savedBatch)
+          setFormData(prev => ({ ...prev, batch: savedBatch }))
+        }
+      } else if (!selectedBatch || !batches.includes(selectedBatch)) {
+        setSelectedBatch(batches[0])
+        setFormData(prev => ({ ...prev, batch: batches[0] }))
+      }
+      setLoading(false)
+    } else {
+      setLoading(false)
+    }
+  }, [batches])
 
   useEffect(() => {
     const batch = getSelectedBatch()
@@ -78,35 +94,11 @@ export default function MemoriesPage() {
     }
   }, [selectedBatch])
 
-  const fetchBatches = async () => {
-    try {
-      const response = await fetch('/api/batches', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBatches(data.batches || [])
-        if (data.batches && data.batches.length > 0) {
-          const savedBatch = getSelectedBatch()
-          if (savedBatch && data.batches.includes(savedBatch)) {
-            setSelectedBatch(savedBatch)
-            setFormData(prev => ({ ...prev, batch: savedBatch }))
-          } else {
-            setSelectedBatch(data.batches[0])
-            setFormData(prev => ({ ...prev, batch: data.batches[0] }))
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching batches:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   const fetchMemories = async () => {
     if (!selectedBatch) return
-    
+
     try {
       const url = `/api/memories?batch=${encodeURIComponent(selectedBatch)}`
       const response = await fetch(url, {
@@ -123,7 +115,7 @@ export default function MemoriesPage() {
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files)
-    
+
     if (selectedImages.length + files.length > 25) {
       toast({
         title: "Error",
